@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../utils/constants.dart';
 import '../utils/drawing_utils.dart';
 import '../utils/contestant_names_page.dart'; // Corrected import path
+import 'overall_stats_page.dart';
 
 class JudgeHomePage extends StatefulWidget {
   const JudgeHomePage({super.key});
@@ -12,6 +13,27 @@ class JudgeHomePage extends StatefulWidget {
 }
 
 class _JudgeHomePageState extends State<JudgeHomePage> {
+  void _openOverallStatsPage() {
+    // Build stats from current state
+    final List<ContestantStats> stats = contestantNames.entries.map((entry) {
+      final name = entry.value;
+      final letter = entry.key;
+      double qual1 = 0.0;
+      double qual2 = 0.0;
+      if (scores[letter] != null) {
+        final qual1Scores = scores[letter]?[RunType.qual1] ?? {};
+        final qual2Scores = scores[letter]?[RunType.qual2] ?? {};
+        qual1 = qual1Scores.values.fold(0.0, (a, b) => a + b);
+        qual2 = qual2Scores.values.fold(0.0, (a, b) => a + b);
+      }
+      return ContestantStats(name: name, qualification1: qual1, qualification2: qual2);
+    }).toList();
+    stats.sort((a, b) => b.totalPoints.compareTo(a.totalPoints));
+    final int cutIndex = 0; // TODO: set cut index based on rules
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (context) => OverallStatsPage(stats: stats, cutIndex: cutIndex),
+    ));
+  }
   List<String> letters = [];
   bool drawingMode = false;
   bool eraserMode = false;
@@ -182,67 +204,79 @@ class JudgeSidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return NavigationRail(
-      minWidth: 36,
-      groupAlignment: -1.0, // Align buttons to the top
-      selectedIndex: currentRun.index,
-      onDestinationSelected: (idx) {
-        if (idx == RunType.values.length) {
-          onEditNamesPressed();
-        } else {
-          onRunSelected(RunType.values[idx]);
-        }
-      },
-      labelType: NavigationRailLabelType.all,
-      destinations: [
-        const NavigationRailDestination(
-          icon: Icon(Icons.looks_one, color: Color(0xFF222B45)),
-          label: Text('Qual 1',
-              style: TextStyle(
-                  fontSize: 14,
-                  color: Color(0xFF222B45),
-                  fontWeight: FontWeight.w600)),
-        ),
-        const NavigationRailDestination(
-          icon: Icon(Icons.looks_two, color: Color(0xFF222B45)),
-          label: Text('Qual 2',
-              style: TextStyle(
-                  fontSize: 14,
-                  color: Color(0xFF222B45),
-                  fontWeight: FontWeight.w600)),
-        ),
-        const NavigationRailDestination(
-          icon: Icon(Icons.filter_1, color: Color(0xFF222B45)),
-          label: Text('Final 1',
-              style: TextStyle(
-                  fontSize: 14,
-                  color: Color(0xFF222B45),
-                  fontWeight: FontWeight.w600)),
-        ),
-        const NavigationRailDestination(
-          icon: Icon(Icons.filter_2, color: Color(0xFF222B45)),
-          label: Text('Final 2',
-              style: TextStyle(
-                  fontSize: 14,
-                  color: Color(0xFF222B45),
-                  fontWeight: FontWeight.w600)),
-        ),
-        NavigationRailDestination(
-          icon: IconButton(
-            icon: const Icon(Icons.edit, color: Color(0xFF222B45)),
-            tooltip: 'Edit Names',
-            onPressed: onEditNamesPressed,
+      return NavigationRail(
+        minWidth: 36,
+        groupAlignment: -1.0, // Align buttons to the top
+        selectedIndex: currentRun.index,
+        onDestinationSelected: (idx) {
+          if (idx < RunType.values.length) {
+            onRunSelected(RunType.values[idx]);
+          } else if (idx == RunType.values.length) {
+            onEditNamesPressed();
+          } else if (idx == RunType.values.length + 1) {
+            // Call parent method to open stats page
+            final state = context.findAncestorStateOfType<_JudgeHomePageState>();
+            state?._openOverallStatsPage();
+          }
+        },
+        labelType: NavigationRailLabelType.all,
+        destinations: [
+          const NavigationRailDestination(
+            icon: Icon(Icons.looks_one, color: Color(0xFF222B45)),
+            label: Text('Qual 1',
+                style: TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF222B45),
+                    fontWeight: FontWeight.w600)),
           ),
-          label: const Text(
-            'Edit Names',
-            style: TextStyle(
-                fontSize: 14,
-                color: Color(0xFF222B45),
-                fontWeight: FontWeight.w600),
+          const NavigationRailDestination(
+            icon: Icon(Icons.looks_two, color: Color(0xFF222B45)),
+            label: Text('Qual 2',
+                style: TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF222B45),
+                    fontWeight: FontWeight.w600)),
           ),
-        ),
-      ],
-    );
+          const NavigationRailDestination(
+            icon: Icon(Icons.filter_1, color: Color(0xFF222B45)),
+            label: Text('Final 1',
+                style: TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF222B45),
+                    fontWeight: FontWeight.w600)),
+          ),
+          const NavigationRailDestination(
+            icon: Icon(Icons.filter_2, color: Color(0xFF222B45)),
+            label: Text('Final 2',
+                style: TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF222B45),
+                    fontWeight: FontWeight.w600)),
+          ),
+          NavigationRailDestination(
+            icon: IconButton(
+              icon: const Icon(Icons.edit, color: Color(0xFF222B45)),
+              tooltip: 'Edit Names',
+              onPressed: onEditNamesPressed,
+            ),
+            label: const Text(
+              'Edit Names',
+              style: TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF222B45),
+                  fontWeight: FontWeight.w600),
+            ),
+          ),
+          const NavigationRailDestination(
+            icon: Icon(Icons.leaderboard, color: Color(0xFF222B45)),
+            label: Text('Overall Stats',
+                style: TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF222B45),
+                    fontWeight: FontWeight.w600)),
+          ),
+        ],
+      );
   }
 }
 

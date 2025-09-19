@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'judge_home_page.dart';
+import 'overall_stats_page.dart';
 
 class JudgeApp extends StatelessWidget {
   const JudgeApp({super.key});
@@ -17,6 +18,9 @@ class JudgeApp extends StatelessWidget {
         scaffoldBackgroundColor: const Color(0xFFF7F8FA),
       ),
       home: const JudgeHomePage(),
+  // No routes needed; navigation handled in JudgeHomePage
     );
   }
+
+  // ...existing code...
 }
