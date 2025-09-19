@@ -13,18 +13,43 @@ class JudgeHomePage extends StatefulWidget {
 }
 
 class _JudgeHomePageState extends State<JudgeHomePage> {
+  Widget _buildContestSwitcher() {
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: ToggleButtons(
+        isSelected: [selectedContest == 'Kids', selectedContest == 'Grown'],
+        onPressed: (idx) {
+          setState(() {
+            selectedContest = idx == 0 ? 'Kids' : 'Grown';
+          });
+        },
+        children: const [
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.0),
+            child: Text('Kids'),
+          ),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.0),
+            child: Text('Grown'),
+          ),
+        ],
+      ),
+    );
+  }
   void _openOverallStatsPage() {
-    // Build stats from current state
-    final List<ContestantStats> stats = contestantNames.entries.map((entry) {
-      final name = entry.value;
+    // Build stats from current contest
+    final contestContestantNames = contestantNames[selectedContest] ?? {};
+    final contestScores = scores[selectedContest] ?? {};
+    final List<ContestantStats> stats = contestContestantNames.entries.map((entry) {
       final letter = entry.key;
+      final name = entry.value;
       double qual1 = 0.0;
       double qual2 = 0.0;
-      if (scores[letter] != null) {
-        final qual1Scores = scores[letter]?[RunType.qual1] ?? {};
-        final qual2Scores = scores[letter]?[RunType.qual2] ?? {};
-        qual1 = qual1Scores.values.fold(0.0, (a, b) => a + b);
-        qual2 = qual2Scores.values.fold(0.0, (a, b) => a + b);
+      if (contestScores[letter] != null) {
+        final qual1Scores = contestScores[letter]?[RunType.qual1] ?? {};
+        final qual2Scores = contestScores[letter]?[RunType.qual2] ?? {};
+        qual1 = (qual1Scores.values).fold(0.0, (a, b) => a + b);
+        qual2 = (qual2Scores.values).fold(0.0, (a, b) => a + b);
       }
       return ContestantStats(name: name, qualification1: qual1, qualification2: qual2);
     }).toList();
@@ -34,26 +59,23 @@ class _JudgeHomePageState extends State<JudgeHomePage> {
       builder: (context) => OverallStatsPage(stats: stats, cutIndex: cutIndex),
     ));
   }
+  String selectedContest = 'Kids'; // 'Kids' or 'Grown'
   List<String> letters = [];
   bool drawingMode = false;
   bool eraserMode = false;
   RunType currentRun = RunType.qual1;
   bool showEditNames = false;
-  Map<String, String> contestantNames = {};
-  final Map<String, Map<RunType, Map<String, double>>> scores = {
-    for (var letter in ['A', 'B', 'C', 'D'])
-      letter: {
-        for (var run in RunType.values)
-          run: {
-            for (var cat in ['Level', 'Creativity', 'Style', 'Stay On']) cat: 0.0,
-          },
-      },
+  Map<String, Map<String, String>> contestantNames = {
+    'Kids': {},
+    'Grown': {},
   };
-  final Map<String, Map<RunType, List<Stroke>>> drawings = {
-    for (var letter in ['A', 'B', 'C', 'D'])
-      letter: {
-        for (var run in RunType.values) run: <Stroke>[],
-      },
+  Map<String, Map<String, Map<RunType, Map<String, double>>>> scores = {
+    'Kids': {},
+    'Grown': {},
+  };
+  Map<String, Map<String, Map<RunType, List<Stroke>>>> drawings = {
+    'Kids': {},
+    'Grown': {},
   };
   final PageController _pageController = PageController();
   bool _isEditingNames = false;
@@ -73,15 +95,15 @@ class _JudgeHomePageState extends State<JudgeHomePage> {
   void loadContestants() {
     // Simulate loading contestants, e.g. from local storage or backend
     // For now, just check if contestantNames is empty
-    if (contestantNames.isEmpty) {
+    if ((contestantNames[selectedContest] ?? {}).isEmpty) {
       letters = [];
     } else {
-      letters = contestantNames.keys.toList();
+      letters = contestantNames[selectedContest]!.keys.toList();
     }
   }
 
   void updateContestants(Map<String, String> updatedNames) {
-    contestantNames = updatedNames;
+    contestantNames[selectedContest] = updatedNames;
     loadContestants();
     setState(() {
       showEditNames = false;
@@ -93,7 +115,7 @@ class _JudgeHomePageState extends State<JudgeHomePage> {
       context,
       MaterialPageRoute(
         builder: (context) => ContestantNamesPage(
-          contestantNames: contestantNames,
+          contestantNames: contestantNames[selectedContest] ?? {},
           onSave: updateContestants,
         ),
       ),
@@ -107,8 +129,11 @@ class _JudgeHomePageState extends State<JudgeHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final contestContestantNames = contestantNames[selectedContest];
+    final contestScores = scores[selectedContest];
+    final contestDrawings = drawings[selectedContest];
     return Scaffold(
-      resizeToAvoidBottomInset: true, // Adjust layout when keyboard is shown
+      resizeToAvoidBottomInset: true,
       backgroundColor: const Color(0xFFF7F8FA),
       appBar: AppBar(
         elevation: 0,
@@ -143,9 +168,12 @@ class _JudgeHomePageState extends State<JudgeHomePage> {
             onPressed: () {
               if (drawingMode) {
                 final pageIdx = _pageController.hasClients ? _pageController.page?.toInt() ?? 0 : 0;
-                if (letters.isNotEmpty && drawings[letters[pageIdx]] != null) {
+                final drawingMap = (contestDrawings != null && letters.isNotEmpty)
+                    ? contestDrawings[letters[pageIdx]]
+                    : null;
+                if (drawingMap != null) {
                   setState(() {
-                    drawings[letters[pageIdx]]![currentRun] = [];
+                    drawingMap[currentRun] = [];
                   });
                 }
               }
@@ -153,36 +181,43 @@ class _JudgeHomePageState extends State<JudgeHomePage> {
           ),
         ],
       ),
-      body: Row(
+      body: Column(
         children: [
-          JudgeSidebar(
-            currentRun: currentRun,
-            onEditNamesPressed: _openContestantNamesPage,
-            onRunSelected: (run) {
-              setState(() {
-                currentRun = run;
-              });
-            },
-          ),
+          _buildContestSwitcher(),
           Expanded(
-            child: letters.isEmpty
-                ? Center(
-                    child: Text(
-                      'Add contestants',
-                      style: TextStyle(fontSize: 24, color: Color(0xFF222B45), fontWeight: FontWeight.bold),
-                    ),
-                  )
-                : JudgeContent(
-                    showEditNames: false,
-                    letters: letters,
-                    contestantNames: contestantNames,
-                    scores: scores,
-                    drawings: drawings,
-                    drawingMode: drawingMode,
-                    currentRun: currentRun,
-                    pageController: _pageController,
-                    onContestantNamesSave: updateContestants,
-                  ),
+            child: Row(
+              children: [
+                JudgeSidebar(
+                  currentRun: currentRun,
+                  onEditNamesPressed: _openContestantNamesPage,
+                  onRunSelected: (run) {
+                    setState(() {
+                      currentRun = run;
+                    });
+                  },
+                ),
+                Expanded(
+                  child: (contestContestantNames?.isEmpty ?? true)
+                      ? Center(
+                          child: Text(
+                            'Add contestants',
+                            style: TextStyle(fontSize: 24, color: Color(0xFF222B45), fontWeight: FontWeight.bold),
+                          ),
+                        )
+                      : JudgeContent(
+                          showEditNames: false,
+                          letters: letters,
+                          contestantNames: contestContestantNames ?? {},
+                          scores: contestScores ?? {},
+                          drawings: contestDrawings ?? {},
+                          drawingMode: drawingMode,
+                          currentRun: currentRun,
+                          pageController: _pageController,
+                          onContestantNamesSave: updateContestants,
+                        ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -205,7 +240,7 @@ class JudgeSidebar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
       return NavigationRail(
-        minWidth: 36,
+    minWidth: 24,
         groupAlignment: -1.0, // Align buttons to the top
         selectedIndex: currentRun.index,
         onDestinationSelected: (idx) {
@@ -256,11 +291,11 @@ class JudgeSidebar extends StatelessWidget {
           NavigationRailDestination(
             icon: IconButton(
               icon: const Icon(Icons.edit, color: Color(0xFF222B45)),
-              tooltip: 'Edit Names',
+              tooltip: 'Names',
               onPressed: onEditNamesPressed,
             ),
             label: const Text(
-              'Edit Names',
+              'Names',
               style: TextStyle(
                   fontSize: 14,
                   color: Color(0xFF222B45),
@@ -269,7 +304,7 @@ class JudgeSidebar extends StatelessWidget {
           ),
           const NavigationRailDestination(
             icon: Icon(Icons.leaderboard, color: Color(0xFF222B45)),
-            label: Text('Overall Stats',
+            label: Text('Stats',
                 style: TextStyle(
                     fontSize: 14,
                     color: Color(0xFF222B45),
@@ -399,7 +434,7 @@ class JudgeContent extends StatelessWidget {
                               Padding(
                                 padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
                                 child: DropdownButton<int>(
-                                  value: (scores[letter]![run]![cat]?.toInt() ?? 1).clamp(1, 10),
+                                  value: (scores[letter]?[run]?[cat]?.toInt() ?? 1).clamp(1, 10),
                                   items: List.generate(10, (index) => index + 1)
                                       .map((value) => DropdownMenuItem<int>(
                                             value: value,
@@ -411,6 +446,8 @@ class JudgeContent extends StatelessWidget {
                                       .toList(),
                                   onChanged: run == currentRun
                                       ? (val) {
+                                          scores[letter] ??= {};
+                                          scores[letter]![run] ??= {};
                                           scores[letter]![run]![cat] = (val ?? 0).toDouble();
                                           setState(() {});
                                         }
@@ -426,11 +463,13 @@ class JudgeContent extends StatelessWidget {
               Expanded(
                 flex: 1,
                 child: _DrawingArea(
-                  strokes: drawings[letter]![currentRun] ?? [],
+                  strokes: drawings[letter]?[currentRun] ?? [],
                   onStrokeUpdate: (newStrokes) {
+                    drawings[letter] ??= {};
                     drawings[letter]![currentRun] = newStrokes;
                   },
                   onClear: () {
+                    drawings[letter] ??= {};
                     drawings[letter]![currentRun] = [];
                   },
                   drawingMode: drawingMode,
