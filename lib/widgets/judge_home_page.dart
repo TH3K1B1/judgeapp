@@ -469,6 +469,16 @@ class _DrawingAreaState extends State<_DrawingArea> {
     _strokes = List.from(widget.strokes);
   }
 
+  @override
+  void didUpdateWidget(_DrawingArea oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.strokes != oldWidget.strokes) {
+      setState(() {
+        _strokes = List.from(widget.strokes);
+      });
+    }
+  }
+
   void _startStroke(Offset pos) {
     if (!widget.drawingMode) return;
     setState(() {
@@ -509,33 +519,31 @@ class _DrawingAreaState extends State<_DrawingArea> {
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: GestureDetector(
-        onPanStart: widget.drawingMode ? (details) => _startStroke(details.localPosition) : null,
-        onPanUpdate: widget.drawingMode ? (details) => _updateStroke(details.localPosition) : null,
-        onPanEnd: widget.drawingMode ? (_) => _endStroke() : null,
-        child: Container(
-          width: double.infinity,
-          height: double.infinity,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: CustomPaint(
-            painter: NotesPainter(
-              strokesByRun: _strokes,
-              blockRect: null,
-              tempStroke: _currentStroke,
+    return GestureDetector(
+      onPanStart: widget.drawingMode ? (details) => _startStroke(details.localPosition) : null,
+      onPanUpdate: widget.drawingMode ? (details) => _updateStroke(details.localPosition) : null,
+      onPanEnd: widget.drawingMode ? (_) => _endStroke() : null,
+      child: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
             ),
-            child: Container(),
+          ],
+        ),
+        child: CustomPaint(
+          painter: NotesPainter(
+            strokesByRun: _strokes,
+            blockRect: null,
+            tempStroke: _currentStroke,
           ),
+          child: Container(),
         ),
       ),
     );
