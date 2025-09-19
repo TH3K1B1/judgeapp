@@ -5,6 +5,8 @@ enum RunType { qualification1, qualification2, final1, final2 }
 void main() => runApp(SkateJudgeApp());
 
 class SkateJudgeApp extends StatelessWidget {
+  const SkateJudgeApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(home: JudgeScreen());
@@ -12,6 +14,8 @@ class SkateJudgeApp extends StatelessWidget {
 }
 
 class JudgeScreen extends StatefulWidget {
+  const JudgeScreen({super.key});
+
   @override
   _JudgeScreenState createState() => _JudgeScreenState();
 }
