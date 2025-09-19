@@ -146,6 +146,33 @@ class _JudgeHomePageState extends State<JudgeHomePage> {
                 fontSize: 22,
                 letterSpacing: 1.2)),
         actions: [
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
+            child: ToggleButtons(
+              borderRadius: BorderRadius.circular(16),
+              borderColor: Color(0xFF222B45),
+              selectedBorderColor: Colors.blue,
+              fillColor: Color(0xFF222B45).withOpacity(0.12),
+              selectedColor: Colors.white,
+              color: Color(0xFF222B45),
+              constraints: BoxConstraints(minWidth: 80, minHeight: 40),
+              isSelected: [selectedContest == 'Kids', selectedContest == 'Grown'],
+              onPressed: (idx) {
+                setState(() {
+                  selectedContest = idx == 0 ? 'Kids' : 'Grown';
+                  loadContestants();
+                });
+              },
+              children: const [
+                Center(
+                  child: Text('Kids', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                ),
+                Center(
+                  child: Text('Grown', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                ),
+              ],
+            ),
+          ),
           IconButton(
             tooltip: 'Draw',
             icon: Icon(
@@ -181,43 +208,36 @@ class _JudgeHomePageState extends State<JudgeHomePage> {
           ),
         ],
       ),
-      body: Column(
+      body: Row(
         children: [
-          _buildContestSwitcher(),
+          JudgeSidebar(
+            currentRun: currentRun,
+            onEditNamesPressed: _openContestantNamesPage,
+            onRunSelected: (run) {
+              setState(() {
+                currentRun = run;
+              });
+            },
+          ),
           Expanded(
-            child: Row(
-              children: [
-                JudgeSidebar(
-                  currentRun: currentRun,
-                  onEditNamesPressed: _openContestantNamesPage,
-                  onRunSelected: (run) {
-                    setState(() {
-                      currentRun = run;
-                    });
-                  },
-                ),
-                Expanded(
-                  child: (contestContestantNames?.isEmpty ?? true)
-                      ? Center(
-                          child: Text(
-                            'Add contestants',
-                            style: TextStyle(fontSize: 24, color: Color(0xFF222B45), fontWeight: FontWeight.bold),
-                          ),
-                        )
-                      : JudgeContent(
-                          showEditNames: false,
-                          letters: letters,
-                          contestantNames: contestContestantNames ?? {},
-                          scores: contestScores ?? {},
-                          drawings: contestDrawings ?? {},
-                          drawingMode: drawingMode,
-                          currentRun: currentRun,
-                          pageController: _pageController,
-                          onContestantNamesSave: updateContestants,
-                        ),
-                ),
-              ],
-            ),
+            child: (contestContestantNames?.isEmpty ?? true)
+                ? Center(
+                    child: Text(
+                      'Add contestants',
+                      style: TextStyle(fontSize: 24, color: Color(0xFF222B45), fontWeight: FontWeight.bold),
+                    ),
+                  )
+                : JudgeContent(
+                    showEditNames: false,
+                    letters: letters,
+                    contestantNames: contestContestantNames ?? {},
+                    scores: contestScores ?? {},
+                    drawings: contestDrawings ?? {},
+                    drawingMode: drawingMode,
+                    currentRun: currentRun,
+                    pageController: _pageController,
+                    onContestantNamesSave: updateContestants,
+                  ),
           ),
         ],
       ),
